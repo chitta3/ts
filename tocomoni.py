@@ -38,10 +38,10 @@ import string
 import serial
 import time
 import datetime
-#import locale
+# import locale
 import syslog
-#import signal
-#import sys
+# import signal
+# import sys
 import os
 
 DBNAME = "/tmp/data.db"
@@ -49,56 +49,60 @@ DBNAME = "/tmp/data.db"
 SERIALPORT = "/dev/ttyUSB0"
 BAUDRATE = 115200
 
+
 def init_serial():
     try:
-#       ser = serial.Serial(port, rate)
-        ser.bytesize = serial.EIGHTBITS #number of bits per bytes
-        ser.parity = serial.PARITY_NONE #set parity check: no parity
-        ser.stopbits = serial.STOPBITS_ONE #number of stop bits
+        #       ser = serial.Serial(port, rate)
+        ser.bytesize = serial.EIGHTBITS  # number of bits per bytes
+        ser.parity = serial.PARITY_NONE  # set parity check: no parity
+        ser.stopbits = serial.STOPBITS_ONE  # number of stop bits
 
-        #ser.timeout = None          #block read
-        #ser.timeout = 0             #non-block read
-        ser.timeout = 2              #timeout block read
-        ser.xonxoff = False     #disable software flow control
-        ser.rtscts = False     #disable hardware (RTS/CTS) flow control
-        ser.dsrdtr = False       #disable hardware (DSR/DTR) flow control
-        ser.writeTimeout = 0     #timeout for write
+        # ser.timeout = None          #block read
+        # ser.timeout = 0             #non-block read
+        ser.timeout = 2  # timeout block read
+        ser.xonxoff = False  # disable software flow control
+        ser.rtscts = False  # disable hardware (RTS/CTS) flow control
+        ser.dsrdtr = False  # disable hardware (DSR/DTR) flow control
+        ser.writeTimeout = 0  # timeout for write
 
         ser.open()
-        ser.flushInput() #flush input buffer, discarding all its contents
-        ser.flushOutput()#flush output buffer, aborting current output
+        ser.flushInput()  # flush input buffer, discarding all its contents
+        ser.flushOutput()  # flush output buffer, aborting current output
         return
 
     except Exception, e:
         print("error open serial port: " + str(e))
         exit()
 
-#def sigint_handler(signal, frame):
-    #syslog.closelog()
-    #ser.close()
-    #con.close()
-    #print("\nInterrupted")
-    #sys.exit(0)
+        # def sigint_handler(signal, frame):
+        # syslog.closelog()
+        # ser.close()
+        # con.close()
+        # print("\nInterrupted")
+        # sys.exit(0)
+
 
 def temp_senser(line, con):
-    line[7] = "{0:.2f}".format(int(line[7]) / 100.0 - 7)	#Temperrature
-    line[9] = "{0:.2f}".format((int(line[9]) -600) / 10.0 - 5)	#ADC1 (mV)
-    line[10] = "{0:.2f}".format((int(line[10]) -600) / 10.0 -5)	#ADC2 (mV)
+    line[7] = "{0:.2f}".format(int(line[7]) / 100.0 - 7)  # Temperrature
+    line[9] = "{0:.2f}".format((int(line[9]) - 600) / 10.0 - 5)  # ADC1 (mV)
+    line[10] = "{0:.2f}".format((int(line[10]) - 600) / 10.0 - 5)  # ADC2 (mV)
 
     write_db(con, 'OuterTemp', line[7], line[6], line[12])
     write_db(con, 'OMsysTemp', line[10], line[6], line[12])
 
     return line
 
+
 def atom_senser(line, con):
     # line[7]  Atmospheric Pressure (hPa)
-    line[9] = "{0:.2f}".format((int(line[9]) -600) / 10.0 +2)	#ADC1 (mV)
-    line[10] = "{0:.2f}".format((int(line[10]) -600) / 10.0 +2)	#ADC2 (mV)
+    line[9] = "{0:.2f}".format((int(line[9]) - 600) / 10.0 + 2)  # ADC1 (mV)
+    line[10] = "{0:.2f}".format((int(line[10]) - 600) / 10.0 + 2)  # ADC2 (mV)
 
     write_db(con, 'AtomPress', line[7], line[6], line[12])
     write_db(con, 'WaterTemp', line[9], line[6], line[12])
 
     return line
+
 
 def write_db(con, type, value, batt, stump):
     c = con.execute("""SELECT * FROM data WHERE id = '{0}';""".format(type))
@@ -113,6 +117,7 @@ def write_db(con, type, value, batt, stump):
             VALUES('{0}', '{1}', '{2}', '{3}');""".format(type, value, batt, stump))
 
     return
+
 
 def main():
     try:
@@ -130,14 +135,14 @@ def main():
             if len(line) > 3:
                 d = datetime.datetime.now()
                 line.pop()
-                line = line + [d.strftime("%Y%m%d%H%M%S")]	# TimeStump
-#               print line
-                if line[11] == 'L':				# 温度センサ
+                line = line + [d.strftime("%Y%m%d%H%M%S")]  # TimeStump
+                #               print line
+                if line[11] == 'L':  # 温度センサ
                     line = temp_senser(line, con)
-                elif line[11] == 'M':				# 気圧センサ
+                elif line[11] == 'M':  # 気圧センサ
                     line = atom_senser(line, con)
-#               print line
-#               print("{0[12]};{0[11]};{0[5]};{0[7]};{0[9]};{0[10]};{0[6]}".format(line))
+                #               print line
+                #               print("{0[12]};{0[11]};{0[5]};{0[7]};{0[9]};{0[10]};{0[6]}".format(line))
                 syslog.syslog("{0[12]};{0[11]};{0[5]};{0[7]};{0[9]};{0[10]};{0[6]}".format(line))
 
     except Exception, e:
@@ -152,10 +157,12 @@ def main():
         syslog.closelog()
         con.close()
 
+
 def savepid():
     f = open('/var/run/tocomoni.pid', 'w')
-    f.write(str(os.getpid())+'\n')
+    f.write(str(os.getpid()) + '\n')
     f.close()
+
 
 if __name__ == "__main__":
     savepid()
